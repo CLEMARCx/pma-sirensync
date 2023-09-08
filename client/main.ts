@@ -1,5 +1,6 @@
 import { stateBagWrapper } from "./utils";
 import { HornOverride, PrimarySirenOverride, AddonAudioBanks, Debug, debugLog } from "../shared/shared";
+import { sirenConfig } from "./sirens";
 
 const curSirenSound: Map<number, number> = new Map<number, number>();
 const curSiren2Sound: Map<number, number> = new Map<number, number>();
@@ -93,6 +94,9 @@ RegisterKeyMapping("+sirenModeHold", "Hold this button to sound your emergency v
 RegisterCommand("sirenSoundCycle", (): void => {
   const ped: number = PlayerPedId();
   const veh: number = GetVehiclePedIsIn(ped, false);
+  const modelName = GetDisplayNameFromVehicleModel(GetEntityModel(veh)).toLowerCase();
+
+  const sirenPack = getSirensForVehicle(modelName);
 
   if (!isAllowedSirens(veh, ped)) return;
 
@@ -102,7 +106,7 @@ RegisterCommand("sirenSoundCycle", (): void => {
 
   let newSirenMode: number = (ent.sirenMode || 0) + 1;
 
-  if (newSirenMode > 3) {
+  if (newSirenMode > sirenPack.sirens.length) {
     newSirenMode = 1;
   }
 
@@ -230,6 +234,12 @@ stateBagWrapper("lightsOn", (ent: number, value: boolean): void => {
 });
 
 stateBagWrapper("sirenMode", (ent: number, soundMode: number): void => {
+  const ped: number = PlayerPedId();
+  const veh: number = GetVehiclePedIsIn(ped, false);
+  const modelName = GetDisplayNameFromVehicleModel(GetEntityModel(veh)).toLowerCase();
+
+  const sirenPack = getSirensForVehicle(modelName);
+
   const relSoundId: number | undefined = curSirenSound.get(ent);
   if (relSoundId !== undefined) {
     releaseSirenSound(ent, relSoundId);
@@ -239,26 +249,14 @@ stateBagWrapper("sirenMode", (ent: number, soundMode: number): void => {
   const soundId: number = GetSoundId();
   curSirenSound.set(ent, soundId);
   debugLog(`[sirenMode] Setting sound id ${soundId} for ${ent}`);
-  switch (soundMode) {
-    case 1: {
-      PlaySoundFromEntity(soundId, "VEHICLES_HORNS_SIREN_1", ent, 0 as any, false, 0);
-      debugLog(`[sirenMode] playing sound 1 for ${ent} with sound id ${soundId}`);
-      break;
-    }
-    case 2: {
-      PlaySoundFromEntity(soundId, "VEHICLES_HORNS_SIREN_2", ent, 0 as any, false, 0);
-      debugLog(`[sirenMode] playing sound 2 for ${ent} with sound id ${soundId}`);
-      break;
-    }
-    case 3: {
-      PlaySoundFromEntity(soundId, "VEHICLES_HORNS_POLICE_WARNING", ent, 0 as any, false, 0);
-      debugLog(`[sirenMode] playing sound 3 for ${ent} with sound id ${soundId}`);
-      break;
-    }
-    default: {
-      releaseSirenSound(ent, soundId);
-      debugLog(`[sirenMode] invalid soundMode sent to ${ent} with sound id ${soundId}, releasing sound`);
-    }
+
+  const siren = sirenPack.sirens[soundMode - 1];
+  if(siren) {
+    PlaySoundFromEntity(soundId, siren.soundName, ent, siren.soundPack || 0 as any, false, 0);
+    debugLog(`[sirenMode] playing sound ${siren.soundName} of pack ${sirenPack.name} for ${modelName} with sound id ${soundId}`);
+  } else {
+    releaseSirenSound(ent, soundId);
+    debugLog(`[sirenMode] invalid soundMode sent to ${ent} with sound id ${soundId}, releasing sound`);    
   }
 });
 
@@ -290,3 +288,13 @@ stateBagWrapper("siren2Mode", (ent: number, soundMode: number): void => {
     debugLog(`[siren2Mode] invalid soundMode sent to ${ent} with sound id ${soundId}, releasing sound`);
   }
 });
+
+const getSirensForVehicle = (modelName: string): any => {
+  const sirenPack = sirenConfig.find((pack: any) => {
+    const checkWhitelist = pack.whitelist.find((whitelist: any) => whitelist == modelName)
+
+    return checkWhitelist !== undefined ? true : false;
+  });
+
+  return sirenPack !== undefined ? sirenPack : sirenConfig.find((pack: any) => pack.name == 'default');
+}
