@@ -234,9 +234,7 @@ stateBagWrapper("lightsOn", (ent: number, value: boolean): void => {
 });
 
 stateBagWrapper("sirenMode", (ent: number, soundMode: number): void => {
-  const ped: number = PlayerPedId();
-  const veh: number = GetVehiclePedIsIn(ped, false);
-  const modelName = GetDisplayNameFromVehicleModel(GetEntityModel(veh)).toLowerCase();
+  const modelName = GetDisplayNameFromVehicleModel(GetEntityModel(ent)).toLowerCase();
 
   const sirenPack = getSirensForVehicle(modelName);
 
@@ -298,3 +296,36 @@ const getSirensForVehicle = (modelName: string): any => {
 
   return sirenPack !== undefined ? sirenPack : sirenConfig.find((pack: any) => pack.name == 'default');
 }
+
+// Blinker //
+RegisterCommand("leftIndicatorToggle", (): void => {
+  const ped: number = PlayerPedId();
+  const veh: number = GetVehiclePedIsIn(ped, false);
+
+  const ent: StateBagInterface = Entity(veh).state;
+
+  const curMode: boolean = ent.leftIndicatorOn;
+  ent.set("leftIndicatorOn", !curMode, true);
+}, false);
+
+RegisterKeyMapping("leftIndicatorToggle", "Toggle left indicator", "keyboard", "LEFT");
+
+stateBagWrapper("leftIndicatorOn", (ent: number, mode: boolean): void => {
+  SetVehicleIndicatorLights(ent, 1, mode);
+});
+
+RegisterCommand("rightIndicatorToggle", (): void => {
+  const ped: number = PlayerPedId();
+  const veh: number = GetVehiclePedIsIn(ped, false);
+
+  const ent: StateBagInterface = Entity(veh).state;
+
+  const curMode: boolean = ent.rightIndicatorOn;
+  ent.set("rightIndicatorOn", !curMode, true);
+}, false);
+
+RegisterKeyMapping("rightIndicatorToggle", "Toggle right indicator", "keyboard", "RIGHT");
+
+stateBagWrapper("rightIndicatorOn", (ent: number, mode: boolean): void => {
+  SetVehicleIndicatorLights(ent, 0, mode);
+});
