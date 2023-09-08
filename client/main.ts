@@ -298,6 +298,9 @@ const getSirensForVehicle = (modelName: string): any => {
 }
 
 // Blinker //
+let leftIndicatorTick: any = null;
+let leftIndicatorTimeout: any = null;
+
 RegisterCommand("leftIndicatorToggle", (): void => {
   const ped: number = PlayerPedId();
   const veh: number = GetVehiclePedIsIn(ped, false);
@@ -306,6 +309,18 @@ RegisterCommand("leftIndicatorToggle", (): void => {
 
   const curMode: boolean = ent.leftIndicatorOn;
   ent.set("leftIndicatorOn", !curMode, true);
+
+  leftIndicatorTick = setTick(() => {
+    const speed = GetEntitySpeed(veh);
+    if(speed > 10 && !leftIndicatorTimeout) {
+      leftIndicatorTimeout = setTimeout(() => {
+        ent.set("leftIndicatorOn", false, true);
+        clearTick(leftIndicatorTick);
+        leftIndicatorTick = null;
+        leftIndicatorTimeout = null;
+      }, 3000);
+    }
+  });
 }, false);
 
 RegisterKeyMapping("leftIndicatorToggle", "Toggle left indicator", "keyboard", "LEFT");
@@ -313,6 +328,9 @@ RegisterKeyMapping("leftIndicatorToggle", "Toggle left indicator", "keyboard", "
 stateBagWrapper("leftIndicatorOn", (ent: number, mode: boolean): void => {
   SetVehicleIndicatorLights(ent, 1, mode);
 });
+
+let rightIndicatorTick: any = null;
+let rightIndicatorTimeout: any = null;
 
 RegisterCommand("rightIndicatorToggle", (): void => {
   const ped: number = PlayerPedId();
@@ -322,6 +340,18 @@ RegisterCommand("rightIndicatorToggle", (): void => {
 
   const curMode: boolean = ent.rightIndicatorOn;
   ent.set("rightIndicatorOn", !curMode, true);
+
+  rightIndicatorTick = setTick(() => {
+    const speed = GetEntitySpeed(veh);
+    if(speed > 10 && !rightIndicatorTimeout) {
+      rightIndicatorTimeout = setTimeout(() => {
+        ent.set("rightIndicatorOn", false, true);
+        clearTick(rightIndicatorTick);
+        rightIndicatorTick = null;
+        rightIndicatorTimeout = null;
+      }, 3000);
+    }
+  });  
 }, false);
 
 RegisterKeyMapping("rightIndicatorToggle", "Toggle right indicator", "keyboard", "RIGHT");
